@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optimization_library"
+version = "0.0.1"
+
+dependencies = [
+    "torch>=2.9.0",
+    "numpy>=2.1.3",
+    "pandas>=2.3.3",
+    "xarray>=2025.10.1",
+    "bayesopt @ git+https://github.com/sophiee03/bayesian_optimization_library.git"
+]
