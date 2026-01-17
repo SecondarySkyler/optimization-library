@@ -1,0 +1,4 @@
+.pytest_cache
+build/
+library.egg-info/
+optimization_library.egg-info/
