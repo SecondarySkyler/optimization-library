@@ -100,8 +100,50 @@ class Experiment:
 
             # Evaluate the objective function with the new candidates
             # It is expected that the user implements this function
-            # It should also include the logic to log the results through yprov4ml
-            objective_function(casted_candidates)
+            evaluation_results = objective_function(casted_candidate)
+            print("Evaluated candidate:", casted_candidate, "Result:", evaluation_results)
+    
+    def results(self) -> pd.DataFrame:
+        params, metrics = self._extract_provenance()
+
+        df = pd.DataFrame(data=params, columns=self.optimization_parameters.input.get_keys())
+        df[self.optimization_parameters.output] = metrics
+        return df
+    
+    def best_configuration(self, metric_name: str = None) -> Dict[str, Any]:
+        """Get the best configuration found during the optimization.
+
+           Args:
+               metric_name: The name of the metric to consider for best configuration.
+                            If None, combine the metrics.
+
+           Returns: A dictionary with the best input configuration and its corresponding metric value(s).
+        """
+        results_df = self.results()
+
+        if metric_name is None:
+            print("Missing implementation for multi-metric best configuration.")
+        else:
+            
+            if metric_name not in self.optimization_parameters.output:
+                raise ValueError(f"Metric {metric_name} not found in optimization outputs.")
+            
+            # Find the index of the metric_name in self.optimization_parameters.output
+            metric_index = self.optimization_parameters.output.index(metric_name)
+
+            # Use the index to determine the optimization direction
+            direction = self.optimization_parameters.directions[metric_index]
+
+            if direction == "minimize":
+                best_row = results_df.loc[results_df[metric_name].idxmin()]
+            else:  # direction == "maximize"
+                best_row = results_df.loc[results_df[metric_name].idxmax()]
+            best_configuration = {key: best_row[key] for key in self.optimization_parameters.input.get_keys()}
+            best_configuration[metric_name] = best_row[metric_name]
+
+            return best_configuration
+        
+
 
 
 
