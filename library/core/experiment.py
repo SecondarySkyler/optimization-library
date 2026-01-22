@@ -26,13 +26,20 @@ class Experiment:
         self.n_iter = n_iter
     
     def _extract_provenance(self):
+        """Method to extract provenance data based on optimization parameters.
+           From the optimization parameters, get the input and output keys to extract.
+           Calls the ETL module to perform the extraction.
+
+           Returns: Two lists: inputs and outputs extracted from provenance. 
+        """
         input, output = self.optimization_parameters._get_keys()
         extractor = ProvenanceExtractor(self.path_to_prov, {"input": input, "output": output})
         return extractor.extract_all()
     
     def run_clustering(self, X, method: str) -> pd.DataFrame:
         """Run clustering on the input data X using the specified method.
-            Returns a DataFrame with the original data and cluster labels.    
+           
+           Returns: DataFrame with the original data and cluster labels.    
         """
         model, labels = perform_clustering(X, method)
         df = pd.DataFrame(data=X, columns=self.optimization_parameters.input.get_keys())
@@ -67,7 +74,7 @@ class Experiment:
                     n_restarts=self.optimizer_config.num_restarts,
                     raw_samples=self.optimizer_config.num_samples,
                     acqf=self.optimizer_config.acquisition_function,
-                    beta=self.optimizer_config.beta,
+                    beta=self.optimizer_config.beta
                 ),          
                 bounds=bounds,
             )
@@ -78,47 +85,20 @@ class Experiment:
                 "metrics": out,
             }
 
-            print(data)
-
             # Launch the bayesian process to get new candidates
             result = self.optimizer.run(data)
 
-            print("Optimization Results:", result)
+            candidate = result.candidates[0] # Since we are generating one candidate at a time
 
-            # self.optimizer.prepare_data(data)
-
-            self.optimizer.print_estimations(
-                result.posterior.mean,
-                result.posterior.variance.sqrt()
-            )
-            # print(self.optimizer.X_norm)
-
-            # self.optimizer.model_training()
-            # print("Surrogate Model trained.")
-
-            # candidates, denorm_candidates, acq_value = self.optimizer.optimize()
-            # print("Denormalized Candidates:", denorm_candidates)
-
-            # # estimations = self.optimizer.estimate(denorm_candidates)
-            # # print("Estimations:", estimations)
-            # denorm_candidates = denorm_candidates[0]
-            
-            candidate = result.candidates[0]
+            # Cast the candidate to appropriate types and format it as a dictionary
             input_keys = self.optimization_parameters.input.get_keys()
-            casted_candidates = {}
+            casted_candidate = {}
             for i, key in enumerate(input_keys):
-                casted_candidates[key] = int(np.round(candidate[i]))
+                # casted_candidate[key] = int(np.round(candidate[i]))
+                casted_candidate[key] = candidate[i]
 
-            # # # Now, round the denorm_candidates and format them as configurations
-            # casted_candidates = {
-            #     "LR": result.candidates[0][0],
-            #     "BATCH_SIZE": int(np.round(result.candidates[0][1])),
-            #     "EPOCHS": int(np.round(result.candidates[0][2])),
-            # }
 
-            print("Casted Candidates:", casted_candidates)
-
-            # Finally, evaluate the objective function with the new candidates
+            # Evaluate the objective function with the new candidates
             # It is expected that the user implements this function
             # It should also include the logic to log the results through yprov4ml
             objective_function(casted_candidates)
