@@ -10,7 +10,7 @@ import numpy as np
 from bayesopt.bayesian_handler import BayesianOptimizer, OptimizationConfig
 
 
-ObjectiveFunctionType = Callable[[Dict[str, Any]], Any]
+ObjectiveFunctionType = Callable[[Dict[str, Any]], Dict[str, Any]] # Maybe the return type should be more specific e.g. [str, float]
 
 class Experiment:
     def __init__(
@@ -35,6 +35,20 @@ class Experiment:
         input, output = self.optimization_parameters._get_keys()
         extractor = ProvenanceExtractor(self.path_to_prov, {"input": input, "output": output})
         return extractor.extract_all()
+    
+    def _validate_evaluation_results(self, results: Dict[str, Any]):
+        """Validate that the evaluation results contain all required output metrics.
+
+           Args:
+               results: A dictionary containing the evaluation results.
+
+           Raises:
+               ValueError: If any required output metric is missing in the results.
+        """
+        missing =  set(self.optimization_parameters.output) - results.keys()
+        if missing:
+            raise ValueError(f"Missing output metrics in evaluation results: {missing}")
+        
     
     def run_clustering(self, X, method: str) -> pd.DataFrame:
         """Run clustering on the input data X using the specified method.
@@ -101,6 +115,10 @@ class Experiment:
             # Evaluate the objective function with the new candidates
             # It is expected that the user implements this function
             evaluation_results = objective_function(casted_candidate)
+            if isinstance(evaluation_results, dict):
+                self._validate_evaluation_results(evaluation_results)
+            else:
+                raise TypeError("Objective function must return a dictionary.")
             print("Evaluated candidate:", casted_candidate, "Result:", evaluation_results)
     
     def results(self) -> pd.DataFrame:
