@@ -165,11 +165,6 @@ class ProvenanceExtractor:
                 # Check v is a dict (probably will be removed) and the dict contains a path, this means we have to parse a file
                 if isinstance(v, dict) and "yProv4ML:path" in v:
                     path = v["yProv4ML:path"]
-                    # This is temporarly since I use a folder different from prov/
-                    path = path.split("/")
-                    path[0] = str(self.provenance_folder)
-                    path = "/".join(path)
-                    
                     data = self.__extract_from_file(path)
                     
                     if len(data[k]) > 1:
