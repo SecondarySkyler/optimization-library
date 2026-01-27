@@ -4,7 +4,7 @@ This library provides a set of functionalities for performing hyperparameter tun
 ## Installation
 First, start by cloning the repository:
 ```bash
-git clone
+git clone https://github.com/SecondarySkyler/optimization-library.git
 ```
 
 Then, navigate to the project directory:
