@@ -7,6 +7,7 @@ from ..utils.clustering import perform_clustering
 
 import pandas as pd
 import numpy as np
+import yprov4ml
 from bayesopt.bayesian_handler import BayesianOptimizer, OptimizationConfig
 
 
@@ -24,6 +25,7 @@ class Experiment:
         self.optimizer_config = optimizer_config
         self.path_to_prov = path_to_prov
         self.n_iter = n_iter
+        self._runs = None # a pd.DataFrame to store the runs
     
     def _extract_provenance(self):
         """Method to extract provenance data based on optimization parameters.
@@ -49,6 +51,32 @@ class Experiment:
         if missing:
             raise ValueError(f"Missing output metrics in evaluation results: {missing}")
         
+    def _log_config(self, config: Dict[str, Any], results: Dict[str, Any]):
+        """Log the configuration and results to provenance.
+        """
+        yprov4ml.start_run(
+            prov_user_namespace="www.example.org",
+            experiment_name=f"test_prov_experiment", 
+            provenance_save_dir=self.path_to_prov,
+            save_after_n_logs=100,
+            collect_all_processes=False, 
+            disable_codecarbon=True, 
+            metrics_file_type=yprov4ml.MetricsType.NETCDF,
+        )
+
+        for key, value in config.items():
+            yprov4ml.log_param(key, value, yprov4ml.Context.TRAINING)
+        
+        for key, value in results.items():
+            yprov4ml.log_metric(key, value, yprov4ml.Context.TRAINING)
+        
+        yprov4ml.end_run(
+            create_graph=False,
+            create_svg=False,
+            crate_ro_crate=False
+        )
+
+        
     
     def run_clustering(self, X, method: str) -> pd.DataFrame:
         """Run clustering on the input data X using the specified method.
@@ -60,22 +88,28 @@ class Experiment:
         df['cluster'] = labels
         return df
     
-    def optimize(self, objective_function: ObjectiveFunctionType):
+    def optimize(self, objective_function: ObjectiveFunctionType, verbose: bool = False):
+        """Main method to run the optimization loop.
+
+           Args:
+               objective_function: A callable that takes a dictionary of input parameters and evaluates the objective.
+               verbose: If True, prints detailed logs during optimization.
+            Returns: None  
+        """
         
         # Generate the bounds from the Search Space
         bounds = self.optimization_parameters.input.bounds().T
+        if verbose:
+            print("Optimization Bounds:", bounds)
 
         for _ in range(self.n_iter):
-        # Extract provenance data
+            # Extract provenance data
             inp, out = self._extract_provenance()
-            # inp = [
-            #     [np.float64(0.001), np.float64(32.0), np.float64(5.0)], 
-            #     [np.float64(0.0001), np.float64(16.0), np.float64(10.0)]
-            # ] 
-            # out = [
-            #     [np.float64(0.6785), np.float64(0.0006668533314950764)], 
-            #     [np.float64(0.596), np.float64(0.0015004605520516634)]
-            # ]
+            
+            if verbose:
+                print(f"Extracted {len(inp)} data points from provenance.")
+                # for x, y in zip(inp, out):
+                #     print("Input:", x, "Output:", y)
 
 
             # Initialize Bayesian Optimizer
@@ -120,6 +154,9 @@ class Experiment:
             else:
                 raise TypeError("Objective function must return a dictionary.")
             print("Evaluated candidate:", casted_candidate, "Result:", evaluation_results)
+
+            # Log the configuration and results to provenance
+            self._log_config(casted_candidate, evaluation_results)
     
     def results(self) -> pd.DataFrame:
         params, metrics = self._extract_provenance()
@@ -130,6 +167,8 @@ class Experiment:
     
     def best_configuration(self, metric_name: str = None) -> Dict[str, Any]:
         """Get the best configuration found during the optimization.
+            If a metric_name is provided, return the configuration that optimizes that metric (accordingly to its direction).
+            If no metric_name is provided and multiple outputs exist, return the Pareto front.
 
            Args:
                metric_name: The name of the metric to consider for best configuration.
@@ -139,8 +178,12 @@ class Experiment:
         """
         results_df = self.results()
 
-        if metric_name is None:
-            print("Missing implementation for multi-metric best configuration.")
+        if metric_name is None and len(self.optimization_parameters.output) > 1:
+            points = results_df[self.optimization_parameters.output]
+            # paretoset lib requires the sense to be in the format of list of "max"/"min", so temporarily map directions and take first 3 letters
+            senses = list(map(lambda d: d[:3], self.optimization_parameters.directions))
+            mask = paretoset(points, sense=senses)
+            return points[mask]
         else:
             
             if metric_name not in self.optimization_parameters.output:
