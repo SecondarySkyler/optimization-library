@@ -3,6 +3,7 @@ from typing import Callable, Dict, Any
 from ..optimization_parameters.optimization_parameters import OptimizationParameters
 from ..optimization_parameters.optimizer_config import OptimizerConfig
 from ..etl.extractors.provenance_extractor import ProvenanceExtractor
+from ..optimization_parameters.directions import Directions
 from ..utils.clustering import perform_clustering
 
 import pandas as pd
@@ -195,7 +196,7 @@ class Experiment:
             # Use the index to determine the optimization direction
             direction = self.optimization_parameters.directions[metric_index]
 
-            if direction == "minimize":
+            if direction == Directions.MINIMIZE.value:
                 best_row = results_df.loc[results_df[metric_name].idxmin()]
             else:  # direction == "maximize"
                 best_row = results_df.loc[results_df[metric_name].idxmax()]
