@@ -47,7 +47,10 @@ class ProvenanceExtractor:
         """
         Returns a list of experiment directories within the provenance folder.
         """
-        return [p for p in self.provenance_folder.iterdir() if p.is_dir()]
+        return [
+            p for p in self.provenance_folder.iterdir()
+            if p.is_dir() and not p.name.startswith("unified_experiment")
+        ]
     
     def _get_metrics_dir(self, experiment_path):
         """
