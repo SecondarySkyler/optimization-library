@@ -9,6 +9,8 @@ from ..utils.clustering import perform_clustering
 import pandas as pd
 import numpy as np
 import yprov4ml
+from pathlib import Path
+import os
 from bayesopt.bayesian_handler import BayesianOptimizer, OptimizationConfig
 
 
@@ -71,11 +73,43 @@ class Experiment:
         for key, value in results.items():
             yprov4ml.log_metric(key, value, yprov4ml.Context.TRAINING)
         
+            yprov4ml.end_run(
+                create_graph=False,
+                create_svg=False,
+                crate_ro_crate=False
+            )
+    
+
+    def _generate_unified_log(self):
+        """
+        Generate a unified log of the experiment
+        
+        """
+        path = Path(self.path_to_prov)
+        experiment_dirs = [p for p in path.iterdir() if p.is_dir()]
+
+        yprov4ml.start_run(
+            prov_user_namespace="www.example.org",
+            experiment_name=f"unified_experiment", 
+            provenance_save_dir=self.path_to_prov,
+            save_after_n_logs=100,
+            collect_all_processes=False, 
+            disable_codecarbon=True, 
+            metrics_file_type=yprov4ml.MetricsType.NETCDF,
+        )
+
+        for experiment_dir in experiment_dirs:
+            for file in os.listdir(experiment_dir):
+                if file.endswith(".json"):
+                    filename = os.path.join(experiment_dir, file)
+                    yprov4ml.log_artifact("test", filename, yprov4ml.Context.VALIDATION)
+
         yprov4ml.end_run(
             create_graph=False,
             create_svg=False,
             crate_ro_crate=False
         )
+    
 
         
     
@@ -143,6 +177,7 @@ class Experiment:
             input_keys = self.optimization_parameters.input.get_keys()
             casted_candidate = {}
             for i, key in enumerate(input_keys):
+                # TODO: cast the candidate to the appropriate type
                 # casted_candidate[key] = int(np.round(candidate[i]))
                 casted_candidate[key] = candidate[i]
 
@@ -158,6 +193,9 @@ class Experiment:
 
             # Log the configuration and results to provenance
             self._log_config(casted_candidate, evaluation_results)
+        
+        # After optimization, generate a unified log of the experiment
+        self._generate_unified_log()
     
     def results(self) -> pd.DataFrame:
         params, metrics = self._extract_provenance()
