@@ -4,3 +4,6 @@ library.egg-info/
 optimization_library.egg-info/
 __pycache__/
 prov/
+hartmann6_provenance/
+examples/*
+!examples/*.ipynb
