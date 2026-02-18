@@ -13,3 +13,6 @@ class Parameter:
     
     def decode(self, value: float) -> Any:
         raise NotImplementedError("Subclasses must implement this method.")
+    
+    def round(self):
+        raise NotImplementedError("Subclasses must implement this method.")

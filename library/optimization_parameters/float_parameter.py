@@ -14,3 +14,6 @@ class FloatParameter(Parameter):
 
     def decode(self, value: float) -> float:
         return self.lower + value * (self.upper - self.lower)
+    
+    def round(self, value) -> float:
+        return value
