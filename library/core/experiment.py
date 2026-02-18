@@ -244,6 +244,31 @@ class Experiment:
             best_configuration[metric_name] = best_row[metric_name]
 
             return best_configuration
+    
+    def shap_analysis(self):
+        """Perform SHAP analysis on the optimization results.
+           
+           Returns: SHAP values and summary plot.
+        """
+        import shap
+
+        results_df = self.results()
+        X = results_df[self.optimization_parameters.input.get_keys()]
+        y = results_df[self.optimization_parameters.output]
+
+        # Train a surrogate model (e.g., Random Forest) to approximate the objective function
+        from sklearn.ensemble import RandomForestRegressor
+        model = RandomForestRegressor()
+        model.fit(X, y)
+
+        # Create SHAP explainer
+        explainer = shap.Explainer(model, X)
+        shap_values = explainer(X)
+
+        # Plot SHAP summary
+        shap.summary_plot(shap_values, X)
+
+        return shap_values 
         
 
 
