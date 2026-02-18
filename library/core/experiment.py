@@ -73,11 +73,11 @@ class Experiment:
         for key, value in results.items():
             yprov4ml.log_metric(key, value, yprov4ml.Context.TRAINING)
         
-            yprov4ml.end_run(
-                create_graph=False,
-                create_svg=False,
-                crate_ro_crate=False
-            )
+        yprov4ml.end_run(
+            create_graph=False,
+            create_svg=False,
+            crate_ro_crate=False
+        )
     
 
     def _generate_unified_log(self):
@@ -173,13 +173,15 @@ class Experiment:
 
             candidate = result.candidates[0] # Since we are generating one candidate at a time
 
-            # Cast the candidate to appropriate types and format it as a dictionary
-            input_keys = self.optimization_parameters.input.get_keys()
+            # Now that we have the candidate, we need to:
+            # 1. Cast the candidate to appropriate types (since the optimizer works with floats)
+            # 2. Format it as a dictionary to be passed to the objective function
+            # 3. Evaluate the objective function with the new candidate
+
             casted_candidate = {}
-            for i, key in enumerate(input_keys):
-                # TODO: cast the candidate to the appropriate type
-                # casted_candidate[key] = int(np.round(candidate[i]))
-                casted_candidate[key] = candidate[i]
+
+            for param, generated_val in zip(self.optimization_parameters.input.parameters, candidate):
+                casted_candidate[param.name] = param.round(generated_val)
 
 
             # Evaluate the objective function with the new candidates
